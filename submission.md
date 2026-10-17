@@ -1,0 +1,23 @@
+# AI usage
+
+This work was completed with Codex as an active coding agent. It read the assignment and repository, traced routes into services and models, implemented changes, and ran checks. These are agent-run checks, not claims that the student manually performed them. Review and rerun them before submission.
+
+Specific uses included summarizing the Flask/SQLAlchemy architecture and tracing `POST /songs/<id>/rate` into `rate_song()`, then comparing its persistence and notification steps with `add_to_playlist()`. Codex also traced search results through `select(Song)`, the association-table join, and scalar result serialization to explain how tag cardinality affects result count. Diagnoses were checked against executable reproductions rather than accepted from explanation alone; detailed results follow below.
+
+# Codebase map
+
+Orientation notes recorded before modifying application code:
+
+- `app.py` owns the shared SQLAlchemy instance and `create_app(config)`. The factory applies configuration, initializes the database, registers four blueprints, and creates tables.
+- `models.py` defines User, Song, Tag, ListeningEvent, Rating, Playlist, and Notification. Friendships and song tags use association tables. `playlist_entries` stores song positions, the contributor, and addition time. Model `to_dict()` methods produce API payloads.
+- `routes/songs.py` exposes search, song detail, listening, and rating endpoints. `routes/playlists.py` exposes creation, metadata, ordered songs, and additions. `routes/feed.py` exposes listening-now and activity. `routes/users.py` exposes profiles, streaks, notifications, and marking notifications read.
+- `services/streak_service.py` records listening events and maintains a stored streak using calendar dates. `services/feed_service.py` queries friends' events and builds listening-now and historical activity responses.
+- `services/search_service.py` searches title/artist and retrieves individual songs. `services/playlist_service.py` creates playlists and retrieves metadata and position-ordered songs.
+- `services/notification_service.py` saves ratings, adds songs to playlists, creates notifications, retrieves them, and marks them read.
+- `seed_data.py` recreates sample users, friendships, songs, tags, events, playlists, and notifications. `tests/` initially contains isolated SQLite tests for streaks, searches, and playlist retrieval. `requirements.txt` lists runtime and test dependencies.
+
+Data flow — rating: `POST /songs/<song_id>/rate` parses `user_id` and `score` in `routes/songs.py`, converts the score to an integer, and calls `notification_service.rate_song()`. The service validates the range and song/user existence, queries that user's rating for the song, creates or updates the Rating, and commits. The route serializes the returned model with `Rating.to_dict()` and returns JSON with status 201.
+
+Data flow — listening-now: `GET /feed/<user_id>/listening-now` calls `get_friends_listening_now()`, loads the user's friends, filters their ListeningEvent rows by time, sorts newest first, and retains the newest event per friend. User and Song serializers supply the nested JSON. The route adds the count.
+
+Pattern: routes generally parse requests and translate service results/errors into HTTP responses; services own queries and business operations. Profiles are a small exception: the user route queries User directly. Database timestamps use UTC defaults and SQLite may return them without timezone information.

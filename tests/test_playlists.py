@@ -107,3 +107,33 @@ def test_playlist_newest_song_and_single_song_are_visible(app):
             assert result['count'] == position
             assert [row['id'] for row in result['songs']] == [s.id for s in songs[:position]]
         assert client.get(f'/playlists/{playlist.id}').json['name'] == 'Boundary'
+
+
+def test_add_song_http_records_position_contributor_and_notifies(app):
+    """Exercise the reported add/refetch sequence rather than bypassing POST."""
+    with app.app_context():
+        sharer = User(username='owner', email='owner@example.com')
+        adder = User(username='adder', email='adder@example.com')
+        db.session.add_all([sharer, adder])
+        db.session.flush()
+        playlist = create_playlist('Friday Energy', adder.id)
+        songs = [Song(title=f'Addition {i}', artist='Artist', shared_by=sharer.id)
+                 for i in range(2)]
+        db.session.add_all(songs)
+        db.session.commit()
+        client = app.test_client()
+        for position, song in enumerate(songs, start=1):
+            response = client.post(f'/playlists/{playlist.id}/songs',
+                json={'song_id': song.id, 'added_by': adder.id})
+            assert response.status_code == 201
+            result = client.get(f'/playlists/{playlist.id}/songs').json
+            assert [row['id'] for row in result['songs']] == [s.id for s in songs[:position]]
+            entry = db.session.execute(playlist_entries.select().where(
+                playlist_entries.c.playlist_id == playlist.id,
+                playlist_entries.c.song_id == song.id)).one()
+            assert entry.position == position
+            assert entry.added_by == adder.id
+        assert client.get(f'/users/{sharer.id}/notifications').json['count'] == 2
+        assert client.post(f'/playlists/{playlist.id}/songs',
+            json={'song_id': songs[0].id, 'added_by': adder.id}).status_code == 201
+        assert client.get(f'/playlists/{playlist.id}/songs').json['count'] == 2

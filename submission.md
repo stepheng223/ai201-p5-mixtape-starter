@@ -63,3 +63,15 @@ Pattern: routes generally parse requests and translate service results/errors in
 - **Root cause:** Python's `[:-1]` slice excludes the final element. Since the query sorts by ascending position, it always drops the highest-position song. Adding a new final entry moves the previously hidden song out of that excluded slot. An empty list stays empty and a one-song playlist becomes empty, explaining the boundary cases.
 - **Fix:** Serialize the entire ordered `songs` list. There is no sentinel row to remove; every row is a real playlist member.
 - **Side-effect check:** All four playlist tests pass: empty lists, five-song count, exact position order, and a new single-song/append test that fetches JSON after each insertion and checks metadata remains available. This verifies both small boundaries and that retaining the final row preserves the prior order.
+
+# Additional integration fix — playlist additions
+
+The full Issue #5 POST/refetch check exposed a separate starter defect. A new HTTP test failed with `NOT NULL constraint failed: playlist_entries.position`. Tracing `add_to_playlist()` into the `Playlist.songs` relationship showed that plain relationship append supplies the two IDs but cannot supply required `position` and `added_by` association fields. Replaced append with an explicit association insert carrying the contributor and the next position (maximum existing position plus one, or 1 for an empty playlist), then expired the loaded relationship. The integration regression adds two songs through POST, fetches both in order, checks stored contributor/position, verifies two sharer notifications, and confirms readding a member does not duplicate membership. This is a separate supporting commit rather than being bundled with any of the five reported fixes. Position allocation follows this app's sequential request model; concurrent additions would need stronger transaction/ordering coordination.
+
+# Regression evidence
+
+Run `.venv/bin/python -m pytest tests/ -q` from the repository root. New tests include `tests/test_feed.py` (UTC midnight vs. yesterday and independent activity history), `tests/test_notifications.py` (persisted rating notifications and neighboring behaviors), and additional search/playlist tests. The feed and notification regressions were each run before the corresponding fix and failed with counts 1 instead of 0 and 0 instead of 1, respectively. The new single-song playlist regression failed with count 0 instead of 1 before removing the slice. These assertions would detect reintroduction of those bugs. Existing starter regressions also failed before the streak, search, and playlist fixes.
+
+# Submission
+
+Branch: `bugfix/mixtape`. Submit `https://github.com/stepheng223/ai201-p5-mixtape-starter/tree/bugfix/mixtape` after the branch has been pushed. Capture `git log --oneline` while on that branch for the required screenshot; text history is also recorded in `commit-history.txt`. The orientation map has its own commit before all application fixes. Each reported issue has its own subsequent `fix:` commit and RCA above.

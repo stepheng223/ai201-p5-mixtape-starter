@@ -31,3 +31,11 @@ Pattern: routes generally parse requests and translate service results/errors in
 - **Root cause:** The consecutive-day branch required both `days_since_last == 1` and `today.weekday() != 6`. Python numbers Sunday as 6, so a Sunday listen fell through to the reset branch even when the previous listen was Saturday. Streak continuity depends on elapsed calendar days, not day of week.
 - **Fix:** Removed the weekday restriction; a one-day date difference always increments the streak.
 - **Side-effect check:** Ran all five streak tests. New users still start at 1, Monday-to-Tuesday increments, repeated same-day listens do not increment, and skipped days still reset. These exercise the neighboring branches of the modified condition.
+
+**Issue #2 — Friends Listening Now shows people from yesterday**
+
+- **How reproduced:** Added `tests/test_feed.py` before changing the service. With the clock fixed at June 16, 2024, 09:00 UTC and a friend's event at June 15, 23:59:59, the HTTP listening-now endpoint returned count 1 instead of 0.
+- **Navigation:** Traced `routes/feed.py`'s listening-now handler into `get_friends_listening_now()` in `services/feed_service.py`, followed its friend-ID filter and ListeningEvent timestamp query, then compared the independent `get_activity_feed()` query. The fixed-clock failure confirmed the recency cutoff was the specific cause, rather than friendship or serialization.
+- **Root cause:** `cutoff = datetime.now(timezone.utc) - RECENT_THRESHOLD` used a rolling 24-hour window. At 09:00 this admits events since 09:00 yesterday, so last night's listening remains until its timestamp ages out. A calendar-day feed must use midnight instead of a duration before the current time.
+- **Fix:** Compute today's midnight UTC and retain the inclusive `>=` comparison. UTC follows the app's timestamp convention; this app has no per-user timezone setting.
+- **Side-effect check:** The new test verifies exclusion one second before midnight, inclusion at exactly midnight, newest-only deduplication after another event, and exclusion of a nonfriend. It also confirms the historical activity endpoint retains all three friend events including yesterday's. This checks the neighboring feed whose historical behavior must remain independent.

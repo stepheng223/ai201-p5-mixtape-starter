@@ -84,3 +84,26 @@ def test_empty_playlist_returns_empty_list(app):
 
         songs = get_playlist_songs(playlist.id)
         assert songs == []
+
+
+def test_playlist_newest_song_and_single_song_are_visible(app):
+    """Read back one entry, then append a second and retain both in order."""
+    with app.app_context():
+        user = User(username='boundary', email='boundary@example.com')
+        db.session.add(user)
+        db.session.flush()
+        playlist = create_playlist('Boundary', user.id)
+        songs = [Song(title=title, artist='Artist', shared_by=user.id)
+                 for title in ['First', 'Second']]
+        db.session.add_all(songs)
+        db.session.flush()
+        client = app.test_client()
+        for position, song in enumerate(songs, start=1):
+            db.session.execute(playlist_entries.insert().values(
+                playlist_id=playlist.id, song_id=song.id,
+                position=position, added_by=user.id))
+            db.session.commit()
+            result = client.get(f'/playlists/{playlist.id}/songs').json
+            assert result['count'] == position
+            assert [row['id'] for row in result['songs']] == [s.id for s in songs[:position]]
+        assert client.get(f'/playlists/{playlist.id}').json['name'] == 'Boundary'

@@ -1,8 +1,10 @@
 # AI usage
 
-This work was completed with Codex as an active coding agent. It read the assignment and repository, traced routes into services and models, implemented changes, and ran checks. These are agent-run checks, not claims that the student manually performed them. Review and rerun them before submission.
+This work was completed with Codex as an active coding agent. It read the assignment and repository, traced routes into services and models, implemented changes, and ran checks. These are agent-run checks, not claims that the student manually performed them. Student-performed code verification has not been recorded; agent-run checks below should not be read as student-run checks.
 
 Specific uses included summarizing the Flask/SQLAlchemy architecture and tracing `POST /songs/<id>/rate` into `rate_song()`, then comparing its persistence and notification steps with `add_to_playlist()`. Codex also traced search results through `select(Song)`, the association-table join, and scalar result serialization to explain how tag cardinality affects result count. Diagnoses were checked against executable reproductions rather than accepted from explanation alone; detailed results follow below.
+
+During resubmission review, the student supplied the actual grading rubric and full project brief rather than relying on Codex's initial speculation about the incomplete label. This corrected the review: text commit history is accepted for the required commit-history points, while the full brief still requests a screenshot as a deliverable. Codex then verified that the GitHub branch exists and reran all 18 tests successfully. This is a documented correction of the AI-assisted review, not a claim that the student independently verified application behavior.
 
 # Codebase map
 
@@ -74,6 +76,15 @@ Run `.venv/bin/python -m pytest tests/ -q` from the repository root. New tests i
 
 # Submission
 
-Branch: `bugfix/mixtape`. Submit `https://github.com/stepheng223/ai201-p5-mixtape-starter/tree/bugfix/mixtape` after the branch has been pushed. Capture `git log --oneline` while on that branch for the required screenshot; text history is also recorded in `commit-history.txt`. The orientation map has its own commit before all application fixes. Each reported issue has its own subsequent `fix:` commit and RCA above.
+Branch: `bugfix/mixtape`. Submission URL: https://github.com/stepheng223/ai201-p5-mixtape-starter/tree/bugfix/mixtape . The branch was confirmed published on GitHub during the October 17, 2026 resubmission review. Capture `git log --oneline` while on that branch for the required screenshot; text history is also recorded in `commit-history.txt`. The orientation map has its own commit before all application fixes. Each reported issue has its own subsequent `fix:` commit and RCA above.
 
 Final validation: 18 tests passed; `git diff --check` passed. `seed_data.py` created 5 users, 13 songs, and 3 playlists. A seeded-app Flask test-client request to `/songs/search?q=Anthem` returned HTTP 200 and exactly one result. The real loopback Flask server also completed the curl request with HTTP 200 and exactly one Anthem result containing all three tags; its response arrived after the initial wait. The server was then stopped.
+
+
+# Resubmission verification — October 17, 2026
+
+Codex reran `.venv/bin/python -m pytest tests/ -q`: **18 passed**. `git diff --check` also passed. The five independent issue commits are preserved; no fixes were squashed. The architectural map was originally committed in `4ea04f8`, before the first bug-fix commit `1e28c3c`.
+
+Portal deliverables: submit the branch URL above, this root-level `submission.md`, and an actual terminal screenshot showing `git branch --show-current` and `git log --oneline --decorate -10`. `commit-history.txt` also records the branch and separate fix commits.
+
+For the rubric's student-verification requirement, the student still needs to perform and describe a real check. One concrete check is to run `.venv/bin/python -m pytest tests/test_search.py -q`, inspect `search_songs()` in `services/search_service.py`, and compare its query with the multi-tag fixture in `tests/test_search.py`. Verify why three tag associations previously produced three results and why removing the join retains the tags while returning one song. Record the actual observation in the AI usage section after doing this; no student-run result is asserted here.

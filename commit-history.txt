@@ -1,4 +1,10 @@
-30305ac (HEAD -> bugfix/mixtape) fix: supply position and contributor when adding playlist songs
+Branch: bugfix/mixtape
+Command: git log --oneline --decorate -12
+Captured: 2026-10-17 (before resubmission documentation commit)
+
+215d148 (HEAD -> bugfix/mixtape, origin/bugfix/mixtape) docs: confirm successful loopback HTTP smoke check
+c2f1b79 docs: record regression results and submission commit history
+30305ac fix: supply position and contributor when adding playlist songs
 2bd69cc fix: return the final song in ordered playlist results
 a3000ec fix: notify song sharers when other users rate their songs
 38ad7d6 fix: avoid tag join multiplying matching search songs
@@ -6,3 +12,5 @@ a3000ec fix: notify song sharers when other users rate their songs
 1e28c3c fix: preserve listening streaks across Saturday and Sunday
 4ea04f8 docs: map Mixtape architecture before bug fixes
 aaead6a (origin/main, origin/HEAD, main) Merge pull request #45 from sarcb/fix/1216538223584876-search-dedup
+dc87e8c search: use SQLAlchemy 2.0 select() so Bug #3 duplicates actually surface
+2dfdeaa Add .gitignore file and update README with setup instructions

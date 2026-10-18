@@ -21,3 +21,13 @@ Data flow — rating: `POST /songs/<song_id>/rate` parses `user_id` and `score` 
 Data flow — listening-now: `GET /feed/<user_id>/listening-now` calls `get_friends_listening_now()`, loads the user's friends, filters their ListeningEvent rows by time, sorts newest first, and retains the newest event per friend. User and Song serializers supply the nested JSON. The route adds the count.
 
 Pattern: routes generally parse requests and translate service results/errors into HTTP responses; services own queries and business operations. Profiles are a small exception: the user route queries User directly. Database timestamps use UTC defaults and SQLite may return them without timezone information.
+
+# Root cause analyses
+
+**Issue #1 — My listening streak keeps resetting**
+
+- **How reproduced:** Before edits, ran the existing `test_streak_increments_on_sunday`: listening at noon UTC on June 15 and June 16, 2024 produced 1 instead of 2. The baseline suite had four failures and nine passes.
+- **Navigation:** Followed `routes/songs.py`'s listen handler to `record_listening_event()`, then `update_listening_streak()` in `services/streak_service.py`; compared the date calculation with the stored User fields in `models.py`. The failing controlled Saturday/Sunday test and the explicit Sunday exclusion established the cause.
+- **Root cause:** The consecutive-day branch required both `days_since_last == 1` and `today.weekday() != 6`. Python numbers Sunday as 6, so a Sunday listen fell through to the reset branch even when the previous listen was Saturday. Streak continuity depends on elapsed calendar days, not day of week.
+- **Fix:** Removed the weekday restriction; a one-day date difference always increments the streak.
+- **Side-effect check:** Ran all five streak tests. New users still start at 1, Monday-to-Tuesday increments, repeated same-day listens do not increment, and skipped days still reset. These exercise the neighboring branches of the modified condition.

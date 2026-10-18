@@ -75,3 +75,5 @@ Run `.venv/bin/python -m pytest tests/ -q` from the repository root. New tests i
 # Submission
 
 Branch: `bugfix/mixtape`. Submit `https://github.com/stepheng223/ai201-p5-mixtape-starter/tree/bugfix/mixtape` after the branch has been pushed. Capture `git log --oneline` while on that branch for the required screenshot; text history is also recorded in `commit-history.txt`. The orientation map has its own commit before all application fixes. Each reported issue has its own subsequent `fix:` commit and RCA above.
+
+Final validation: 18 tests passed; `git diff --check` passed. `seed_data.py` created 5 users, 13 songs, and 3 playlists. A seeded-app Flask test-client request to `/songs/search?q=Anthem` returned HTTP 200 and exactly one result. A real loopback server check was attempted but did not yield a response in this execution environment; the successful smoke check uses Flask's test client, not a verified browser session.

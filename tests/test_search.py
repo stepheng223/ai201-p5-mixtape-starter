@@ -117,3 +117,11 @@ def test_search_returns_empty_for_no_match(app, seed_songs):
     with app.app_context():
         results = search_songs("zzz_no_match_zzz")
         assert results == []
+
+
+def test_search_preserves_all_tags_on_unique_result(app, seed_songs):
+    """Deduplication must not discard the song's tags or artist matching."""
+    with app.app_context():
+        results = app.test_client().get('/songs/search?q=borough').json
+        assert results['count'] == 1
+        assert set(results['results'][0]['tags']) == {'rap', 'hip-hop', 'boom bap'}
